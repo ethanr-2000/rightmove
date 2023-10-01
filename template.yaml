@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: Rightmove Scraper Lambda
+
+Parameters:
+  RightmoveUrl:
+    Type: String
+    Default: "https://www.rightmove.co.uk/property-to-rent/find.html?searchType=RENT&locationIdentifier=REGION%5E87490"
+    Description: URL to search rightmove for listings with specific criteria
+  TableName:
+    Type: String
+    Default: rightmove
+    Description: Name of the table that stores information about the listings
+  AlertEmail:
+    Type: String
+    Description: Email address to send alerts to
+
+Resources:
+  RightmoveTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TableName
+      AttributeDefinitions:
+        - AttributeName: url
+          AttributeType: S
+      KeySchema:
+        - AttributeName: url
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      TimeToLiveSpecification:
+        AttributeName: TTL
+        Enabled: true
+
+  RightmoveScraperFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: RightmoveScraperFunction
+      Handler: main.lambda_handler
+      Runtime: python3.11
+      Timeout: 30
+      MemorySize: 256
+      CodeUri: ./src
+      Environment:
+        Variables:
+          RIGHTMOVE_URL: !Ref RightmoveUrl
+          TABLE_NAME: !Ref TableName
+          SNS_TOPIC_ARN: !Ref RightmoveAlertsTopic
+      Events:
+        TimerEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
+      Policies:
+      - Statement:
+          - Effect: Allow
+            Action:
+              - sns:Publish
+            Resource: !Ref RightmoveAlertsTopic
+
+      - Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:GetItem
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+              - dynamodb:BatchWriteItem 
+            Resource: !GetAtt RightmoveTable.Arn
+
+  RightmoveAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: Rightmove Alerts
+
+  EmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: email
+      TopicArn: !Ref RightmoveAlertsTopic
+      Endpoint: !Ref AlertEmail
+
+Outputs:
+  RightmoveTableArn:
+    Description: "ARN of the Rightmove DynamoDB table"
+    Value: !GetAtt RightmoveTable.Arn
+
+  RightmoveScraperFunctionArn:
+    Description: "ARN of the Rightmove Scraper Lambda function"
+    Value: !GetAtt RightmoveScraperFunction.Arn
+
+  RightmoveAlertsTopicArn:
+    Description: "ARN of the Rightmove Alerts SNS topic"
+    Value: !Ref RightmoveAlertsTopic
