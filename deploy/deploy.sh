@@ -6,10 +6,8 @@ pipenv requirements > src/requirements.txt
 # Package and Deploy the application
 sam build --use-container
 
-cd .aws-sam/build
-
 sam package \
-    --template-file template.yaml \
+    --template-file .aws-sam/build/template.yaml \
     --output-template-file packaged.yaml \
     --resolve-s3
 

@@ -1,4 +1,5 @@
 .aws-sam
 __pycache__
 packaged.yaml
-requirements.txt
+**/requirements.txt
+current_search_url.txt

@@ -7,6 +7,7 @@ name = "pypi"
 rightmove-webscraper = "*"
 pandas = "*"
 black = "*"
+requests = "2.27.1"
 
 [dev-packages]
 boto3 = "*"

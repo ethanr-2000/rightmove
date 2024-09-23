@@ -50,7 +50,6 @@ Resources:
           Type: Schedule
           Properties:
             Schedule: rate(5 minutes)
-            State: DISABLED
       Policies:
       - Statement:
           - Effect: Allow
